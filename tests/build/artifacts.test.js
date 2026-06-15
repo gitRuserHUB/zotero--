@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, test } from "vitest";
+import { afterAll, afterEach, describe, expect, test } from "vitest";
 
 import { buildAll } from "../../scripts/build.mjs";
 import {
@@ -9,15 +9,97 @@ import {
   verifyStagedArtifacts,
 } from "../../scripts/verify-artifacts.mjs";
 
+const tempWorkspaces = [];
+let activeWorkspace;
+
+function getWorkspace(root) {
+  const workspace = tempWorkspaces.find((candidate) => candidate.root === root);
+  if (!workspace) {
+    throw new Error(`Unknown temporary workspace: ${root}`);
+  }
+  return workspace;
+}
+
+async function ensureDirectory(workspace, directoryPath) {
+  const relativePath = path.relative(workspace.root, directoryPath);
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw new Error(`Directory is outside temporary workspace: ${directoryPath}`);
+  }
+
+  let currentPath = workspace.root;
+  for (const segment of relativePath.split(path.sep).filter(Boolean)) {
+    currentPath = path.join(currentPath, segment);
+    try {
+      await fs.mkdir(currentPath);
+    } catch (error) {
+      if (error.code !== "EEXIST") {
+        throw error;
+      }
+    }
+    workspace.directories.add(currentPath);
+  }
+}
+
 async function createTempRoot() {
-  return fs.mkdtemp(path.join(os.tmpdir(), "ablesci-artifacts-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "ablesci-artifacts-"));
+  const workspace = {
+    root,
+    files: new Set(),
+    directories: new Set([root]),
+  };
+  tempWorkspaces.push(workspace);
+  activeWorkspace = workspace;
+  return root;
 }
 
 async function writeFile(root, relativePath, contents = "fixture") {
+  const workspace = getWorkspace(root);
   const filePath = path.join(root, relativePath);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await ensureDirectory(workspace, path.dirname(filePath));
   await fs.writeFile(filePath, contents);
+  workspace.files.add(filePath);
   return filePath;
+}
+
+async function replaceFileWithDirectory(root, relativePath) {
+  const workspace = getWorkspace(root);
+  const entryPath = path.join(root, relativePath);
+  await fs.rm(entryPath, { force: true });
+  workspace.files.delete(entryPath);
+  await ensureDirectory(workspace, entryPath);
+}
+
+async function trackBuildOutputs(root) {
+  const workspace = getWorkspace(root);
+  const distPath = path.join(root, "dist");
+
+  for (const [target, entries] of Object.entries(expectedArtifactEntries())) {
+    const targetPath = path.join(distPath, target);
+    await ensureDirectory(workspace, targetPath);
+    for (const entry of entries) {
+      workspace.files.add(path.join(targetPath, entry));
+    }
+  }
+
+  workspace.files.add(
+    path.join(distPath, "zotero-ablesci-assistant-0.1.0.xpi"),
+  );
+  workspace.files.add(
+    path.join(distPath, "ablesci-chromium-extension-0.1.0.zip"),
+  );
+}
+
+async function cleanupWorkspace(workspace) {
+  for (const filePath of workspace.files) {
+    await fs.rm(filePath, { force: true });
+  }
+
+  const directories = [...workspace.directories].sort(
+    (left, right) => right.split(path.sep).length - left.split(path.sep).length,
+  );
+  for (const directoryPath of directories) {
+    await fs.rmdir(directoryPath);
+  }
 }
 
 async function writePackage(root) {
@@ -35,6 +117,21 @@ async function writeAllStagedArtifacts(root) {
     }
   }
 }
+
+afterEach(async () => {
+  if (activeWorkspace) {
+    await cleanupWorkspace(activeWorkspace);
+    activeWorkspace = undefined;
+  }
+});
+
+afterAll(async () => {
+  for (const workspace of tempWorkspaces) {
+    await expect(fs.stat(workspace.root)).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  }
+});
 
 describe("artifact layout", () => {
   test("declares required Zotero and Chromium files", () => {
@@ -69,22 +166,24 @@ describe("artifact layout", () => {
   });
 
   test.each([
-    ["missing", "missing", async () => {}],
-    ["empty", "empty file", async (entryPath) => fs.writeFile(entryPath, "")],
-    ["directory", "not a regular file", async (entryPath) => {
-      await fs.rm(entryPath, { force: true });
-      await fs.mkdir(entryPath);
-    }],
+    [
+      "missing",
+      "missing",
+      async (root, relativePath) =>
+        fs.rm(path.join(root, relativePath), { force: true }),
+    ],
+    [
+      "empty",
+      "empty file",
+      async (root, relativePath) => writeFile(root, relativePath, ""),
+    ],
+    ["directory", "not a regular file", replaceFileWithDirectory],
   ])("rejects a %s staged entry", async (kind, reason, makeInvalid) => {
     const root = await createTempRoot();
     await writeAllStagedArtifacts(root);
-    const invalidPath = path.join(root, "dist", "zotero", "manifest.json");
+    const invalidPath = path.join("dist", "zotero", "manifest.json");
 
-    if (kind === "missing") {
-      await fs.rm(invalidPath, { force: true });
-    } else {
-      await makeInvalid(invalidPath);
-    }
+    await makeInvalid(root, invalidPath);
 
     await expect(verifyStagedArtifacts(root)).rejects.toThrow(
       new RegExp(`dist[\\\\/]zotero[\\\\/]manifest\\.json \\(${reason}\\)`),
@@ -94,14 +193,23 @@ describe("artifact layout", () => {
   test("builds safely without source files and preserves unrelated dist files", async () => {
     const root = await createTempRoot();
     await writePackage(root);
-    await writeFile(root, path.join("dist", "sentinel.txt"), "keep");
+    const sentinels = [
+      path.join("dist", "zotero", "zotero-sentinel.txt"),
+      path.join("dist", "chromium", "chromium-sentinel.txt"),
+    ];
+    for (const sentinel of sentinels) {
+      await writeFile(root, sentinel, "keep");
+    }
     await writeAllStagedArtifacts(root);
+    await trackBuildOutputs(root);
 
     await buildAll(root);
 
-    await expect(
-      fs.readFile(path.join(root, "dist", "sentinel.txt"), "utf8"),
-    ).resolves.toBe("keep");
+    for (const sentinel of sentinels) {
+      await expect(fs.readFile(path.join(root, sentinel), "utf8")).resolves.toBe(
+        "keep",
+      );
+    }
     for (const [target, entries] of Object.entries(expectedArtifactEntries())) {
       for (const entry of entries) {
         await expect(
@@ -154,6 +262,7 @@ describe("artifact layout", () => {
       path.join("src", "browser", "status-panel.css"),
       ".status-panel { display: block; }",
     );
+    await trackBuildOutputs(root);
 
     await buildAll(root);
     await expect(verifyStagedArtifacts(root)).resolves.toBeUndefined();
