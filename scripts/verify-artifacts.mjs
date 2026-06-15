@@ -1,0 +1,39 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+export function expectedArtifactEntries() {
+  return {
+    zotero: ["manifest.json", "bootstrap.js", "ablesci-assistant.js", "icon.svg"],
+    chromium: ["manifest.json", "background.js", "content.js", "status-panel.css"],
+  };
+}
+
+export async function verifyStagedArtifacts(root = process.cwd()) {
+  const missing = [];
+
+  for (const [target, entries] of Object.entries(expectedArtifactEntries())) {
+    for (const entry of entries) {
+      const artifactPath = path.join(root, "dist", target, entry);
+
+      try {
+        await fs.access(artifactPath);
+      } catch {
+        missing.push(path.relative(root, artifactPath));
+      }
+    }
+  }
+
+  if (missing.length > 0) {
+    throw new Error(`Missing staged artifacts:\n${missing.join("\n")}`);
+  }
+}
+
+const isMain =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+
+if (isMain) {
+  await verifyStagedArtifacts();
+  console.log("Artifact verification passed");
+}
