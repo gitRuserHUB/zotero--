@@ -1,7 +1,7 @@
 .superpowers/
+.worktrees/
 dist/
 coverage/
 node_modules/
 *.zip
 *.xpi
-
