@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Zotero 科研通文献求助助手",
+  "version": "0.1.0",
+  "description": "接收 Zotero 文献元数据并辅助填写科研通求助表单",
+  "permissions": ["storage", "clipboardWrite"],
+  "host_permissions": [
+    "https://www.ablesci.com/*",
+    "http://www.ablesci.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.ablesci.com/*",
+        "http://www.ablesci.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["status-panel.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
