@@ -1,0 +1,7 @@
+.superpowers/
+dist/
+coverage/
+node_modules/
+*.zip
+*.xpi
+
