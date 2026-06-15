@@ -1,0 +1,62 @@
+#zotero-ablesci-status {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  width: min(380px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid #b8c7d9;
+  border-left: 5px solid #1769aa;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 20%);
+  color: #17212b;
+  font: 14px/1.5 system-ui, sans-serif;
+}
+
+#zotero-ablesci-status[data-level="warning"] {
+  border-left-color: #b7791f;
+  background: #fffaf0;
+}
+
+#zotero-ablesci-status[data-level="error"] {
+  border-left-color: #c53030;
+  background: #fff5f5;
+}
+
+.zotero-ablesci-heading {
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.zotero-ablesci-conflicts {
+  margin: 8px 0;
+  padding-left: 20px;
+  color: #744210;
+}
+
+.zotero-ablesci-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.zotero-ablesci-actions button {
+  padding: 6px 10px;
+  border: 1px solid #9fb3c8;
+  border-radius: 5px;
+  background: #f7fafc;
+  color: #17212b;
+  cursor: pointer;
+}
+
+.zotero-ablesci-fallback textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 120px;
+  margin-top: 8px;
+}
