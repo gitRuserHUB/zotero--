@@ -26,8 +26,8 @@ npm run verify
 
 构建结果：
 
-- `dist/zotero-ablesci-assistant-0.1.1.xpi`
-- `dist/ablesci-chromium-extension-0.1.1.zip`
+- `dist/zotero-ablesci-assistant-0.1.2.xpi`
+- `dist/ablesci-chromium-extension-0.1.2.zip`
 - `dist/chromium/`：浏览器开发者模式可直接加载的目录
 
 ## 安装 Zotero 插件
@@ -35,13 +35,13 @@ npm run verify
 1. 打开 Zotero。
 2. 进入“工具”→“插件”。
 3. 点击右上角齿轮，选择“从文件安装插件”。
-4. 选择 `dist/zotero-ablesci-assistant-0.1.1.xpi`。
+4. 选择 `dist/zotero-ablesci-assistant-0.1.2.xpi`。
 5. 按提示重启 Zotero。
 6. 确认工具栏出现“科研通求助”，文献右键菜单出现“在科研通发起文献求助”。
 
 ## 安装 Chrome 扩展
 
-1. 解压 `dist/ablesci-chromium-extension-0.1.1.zip`，或直接使用 `dist/chromium/`。
+1. 解压 `dist/ablesci-chromium-extension-0.1.2.zip`，或直接使用 `dist/chromium/`。
 2. 在 Chrome 打开 `chrome://extensions`。
 3. 开启右上角“开发者模式”。
 4. 点击“加载已解压的扩展程序”。

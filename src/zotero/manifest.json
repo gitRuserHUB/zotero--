@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Zotero 科研通文献求助助手",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "将 Zotero 文献元数据发送到科研通文献求助页面",
   "author": "Local",
   "icons": {
@@ -11,6 +11,7 @@
   "applications": {
     "zotero": {
       "id": "zotero-ablesci-assistant@ablesci.local",
+      "update_url": "https://www.ablesci.com/zotero-ablesci-assistant-updates.json",
       "strict_min_version": "8.0-beta.21",
       "strict_max_version": "10.99.99"
     }

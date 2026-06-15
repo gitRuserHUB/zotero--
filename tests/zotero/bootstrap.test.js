@@ -28,6 +28,8 @@ describe("Zotero bootstrap package files", () => {
     expect(manifest.manifest_version).toBe(2);
     expect(manifest.applications.zotero).toMatchObject({
       id: "zotero-ablesci-assistant@ablesci.local",
+      update_url:
+        "https://www.ablesci.com/zotero-ablesci-assistant-updates.json",
       strict_min_version: "8.0-beta.21",
       strict_max_version: "10.99.99",
     });
