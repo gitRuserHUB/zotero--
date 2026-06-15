@@ -329,6 +329,11 @@ describe("artifact layout", () => {
       await fs.readFile("dist/chromium/manifest.json", "utf8"),
     );
     expect(zoteroManifest.version).toBe(packageJson.version);
+    expect(zoteroManifest.applications.zotero).toMatchObject({
+      id: "zotero-ablesci-assistant@ablesci.local",
+      strict_min_version: "8.0-beta.21",
+      strict_max_version: "10.99.99",
+    });
     expect(chromiumManifest.version).toBe(packageJson.version);
     expect(chromiumManifest.manifest_version).toBe(3);
     expect(chromiumManifest.host_permissions).toEqual([
