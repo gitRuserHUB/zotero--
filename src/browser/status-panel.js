@@ -75,8 +75,14 @@ export function createStatusPanel(
     showLoginRequired: () =>
       show("warning", "请先登录科研通，登录后将继续自动填写"),
     showQuerying: () => show("info", "正在通过 DOI 查询"),
-    showReady: (conflicts = []) =>
-      show("success", "已自动填充，请核对后发布", conflicts),
+    showReady: (conflicts = [], warning = "") =>
+      show(
+        warning ? "warning" : "success",
+        warning
+          ? `已自动填充，请核对后发布；${warning}`
+          : "已自动填充，请核对后发布",
+        conflicts,
+      ),
     showWarning: (text) => show("warning", text),
     showError: (text) => show("error", text),
     destroy: () => root.remove(),
