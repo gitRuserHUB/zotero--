@@ -10,22 +10,30 @@ export function expectedArtifactEntries() {
 }
 
 export async function verifyStagedArtifacts(root = process.cwd()) {
-  const missing = [];
+  const invalid = [];
 
   for (const [target, entries] of Object.entries(expectedArtifactEntries())) {
     for (const entry of entries) {
       const artifactPath = path.join(root, "dist", target, entry);
+      const relativePath = path.relative(root, artifactPath);
 
       try {
-        await fs.access(artifactPath);
-      } catch {
-        missing.push(path.relative(root, artifactPath));
+        const stats = await fs.stat(artifactPath);
+
+        if (!stats.isFile()) {
+          invalid.push(`${relativePath} (not a regular file)`);
+        } else if (stats.size === 0) {
+          invalid.push(`${relativePath} (empty file)`);
+        }
+      } catch (error) {
+        const reason = error.code === "ENOENT" ? "missing" : error.message;
+        invalid.push(`${relativePath} (${reason})`);
       }
     }
   }
 
-  if (missing.length > 0) {
-    throw new Error(`Missing staged artifacts:\n${missing.join("\n")}`);
+  if (invalid.length > 0) {
+    throw new Error(`Invalid staged artifacts:\n${invalid.join("\n")}`);
   }
 }
 
