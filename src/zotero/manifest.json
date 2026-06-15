@@ -1,0 +1,18 @@
+{
+  "manifest_version": 2,
+  "name": "Zotero 科研通文献求助助手",
+  "version": "0.1.0",
+  "description": "将 Zotero 文献元数据发送到科研通文献求助页面",
+  "author": "Local",
+  "icons": {
+    "48": "icon.svg",
+    "96": "icon.svg"
+  },
+  "applications": {
+    "zotero": {
+      "id": "zotero-ablesci-assistant@local",
+      "strict_min_version": "9.0-beta.21",
+      "strict_max_version": "9.0.*"
+    }
+  }
+}
