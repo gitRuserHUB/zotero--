@@ -26,10 +26,19 @@ function creatorName(creator) {
   return [creator.lastName, creator.firstName].filter(Boolean).join(", ");
 }
 
+function itemTypeName(item) {
+  if (typeof item.itemType === "string") return item.itemType;
+  try {
+    return globalThis.Zotero?.ItemTypes?.getName?.(item.itemTypeID) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 export function extractMetadata(item) {
   return normalizeMetadata({
     zoteroKey: item.key,
-    itemType: item.itemType,
+    itemType: itemTypeName(item),
     title: item.getField("title"),
     doi: item.getField("DOI"),
     authors: item.getCreators().filter(isAuthor).map(creatorName),

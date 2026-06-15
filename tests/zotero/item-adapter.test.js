@@ -1,10 +1,16 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
 import {
   extractMetadata,
   hasPdfAttachment,
   validateSelection,
 } from "../../src/zotero/item-adapter.js";
+
+const originalZotero = globalThis.Zotero;
+
+afterEach(() => {
+  globalThis.Zotero = originalZotero;
+});
 
 function item(fields = {}, extra = {}) {
   return {
@@ -89,6 +95,18 @@ describe("Zotero metadata extraction", () => {
         item({ title: "Paper", proceedingsTitle: "Proceedings" }),
       ).publicationTitle,
     ).toBe("Proceedings");
+  });
+
+  test("resolves the item type name from itemTypeID", () => {
+    globalThis.Zotero = {
+      ItemTypes: { getName: (id) => (id === 2 ? "book" : "") },
+    };
+
+    expect(
+      extractMetadata(
+        item({ title: "Book" }, { itemType: undefined, itemTypeID: 2 }),
+      ).itemType,
+    ).toBe("book");
   });
 });
 

@@ -93,6 +93,20 @@ describe("AbleSci DOM adapter", () => {
     ).rejects.toThrow("DOI_QUERY_TIMEOUT");
   });
 
+  test("rejects and cleans up when the query control throws", async () => {
+    const query = document.querySelector('[data-testid="doi-query"]');
+    vi.spyOn(query, "click").mockImplementation(() => {
+      throw new Error("query click failed");
+    });
+
+    await expect(
+      createAbleSciAdapter(document).queryDoi("10.1000/broken", {
+        timeoutMs: 200,
+        pollMs: 5,
+      }),
+    ).rejects.toThrow("query click failed");
+  });
+
   test("throws when a critical selector is ambiguous", () => {
     document.body.insertAdjacentHTML("beforeend", '<input name="doi">');
     expect(() => createAbleSciAdapter(document).readValues()).toThrow(

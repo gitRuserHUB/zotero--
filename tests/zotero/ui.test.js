@@ -21,7 +21,9 @@ describe("Zotero window UI", () => {
     const menu = document.querySelector("#ablesci-item-menu");
     expect(toolbar.getAttribute("label")).toBe("科研通求助");
     expect(toolbar.getAttribute("image")).toBe("icon.svg");
+    expect(toolbar.classList.contains("zotero-tb-button")).toBe(true);
     expect(menu.getAttribute("label")).toBe("在科研通发起文献求助");
+    expect(menu.classList.contains("menuitem-iconic")).toBe(true);
     dispatchCommand(toolbar);
     dispatchCommand(menu);
     expect(onCommand).toHaveBeenCalledTimes(2);

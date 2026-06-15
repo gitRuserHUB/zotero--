@@ -71,7 +71,9 @@ export function createPluginRuntime(
 
     addToAllWindows() {
       requireConfig();
-      for (const window of Zotero.getMainWindows()) this.addToWindow(window);
+      for (const window of Zotero.getMainWindows()) {
+        if (window.ZoteroPane) this.addToWindow(window);
+      }
     },
 
     removeFromWindow(window) {
@@ -79,7 +81,9 @@ export function createPluginRuntime(
     },
 
     removeFromAllWindows() {
-      for (const window of Zotero.getMainWindows()) this.removeFromWindow(window);
+      for (const window of Zotero.getMainWindows()) {
+        if (window.ZoteroPane) this.removeFromWindow(window);
+      }
     },
   };
 }

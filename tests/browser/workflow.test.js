@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { describe, expect, test, vi } from "vitest";
 
 import { runWorkflow } from "../../src/browser/workflow.js";
+import { PAYLOAD_TTL_MS } from "../../src/shared/constants.js";
 
 const task = {
   item: {
@@ -25,6 +26,26 @@ function panel() {
 }
 
 describe("browser workflow", () => {
+  test("clears an expired task before inspecting the page", async () => {
+    const store = { save: vi.fn(), clear: vi.fn() };
+    const status = panel();
+    const adapter = { isLoginPage: vi.fn(), isCreatePage: vi.fn() };
+
+    await runWorkflow({
+      task: { ...task, createdAt: 1000 },
+      store,
+      panel: status,
+      adapter,
+      now: () => 1000 + PAYLOAD_TTL_MS + 1,
+    });
+
+    expect(store.clear).toHaveBeenCalledOnce();
+    expect(status.showError).toHaveBeenCalledWith(
+      "本次 Zotero 文献任务已过期，请返回 Zotero 重新发起",
+    );
+    expect(adapter.isLoginPage).not.toHaveBeenCalled();
+  });
+
   test("keeps a pending task on the login page", async () => {
     const store = { save: vi.fn(), clear: vi.fn() };
     const status = panel();

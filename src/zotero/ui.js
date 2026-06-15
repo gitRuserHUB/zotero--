@@ -37,6 +37,7 @@ export function addWindowUi(window, { onCommand, iconUrl }) {
     button.setAttribute("label", "科研通求助");
     button.setAttribute("tooltiptext", "在科研通发起文献求助");
     button.setAttribute("image", iconUrl);
+    button.setAttribute("class", "zotero-tb-button");
     addCommandListener(button, onCommand);
     toolbar.append(button);
   }
@@ -46,6 +47,7 @@ export function addWindowUi(window, { onCommand, iconUrl }) {
     menuItem.id = ITEM_MENU_ID;
     menuItem.setAttribute("label", "在科研通发起文献求助");
     menuItem.setAttribute("image", iconUrl);
+    menuItem.setAttribute("class", "menuitem-iconic");
     addCommandListener(menuItem, onCommand);
     itemMenu.append(menuItem);
   }

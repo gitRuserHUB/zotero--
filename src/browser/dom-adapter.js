@@ -93,36 +93,48 @@ export function createAbleSciAdapter(document) {
 
     await new Promise((resolve, reject) => {
       let settled = false;
+      let observer;
+      let interval;
+      let timeout;
       const finish = (callback, value) => {
         if (settled) return;
         settled = true;
         clearTimeout(timeout);
         clearInterval(interval);
-        observer.disconnect();
+        observer?.disconnect();
         callback(value);
       };
       const check = () => {
-        if (visibleQueryError(document)) {
-          finish(reject, new Error("DOI_QUERY_FAILED"));
-          return;
+        if (settled) return;
+        try {
+          if (visibleQueryError(document)) {
+            finish(reject, new Error("DOI_QUERY_FAILED"));
+            return;
+          }
+          const after = JSON.stringify({ ...readValues(), doi: "" });
+          if (after !== before) finish(resolve);
+        } catch (error) {
+          finish(reject, error);
         }
-        const after = JSON.stringify({ ...readValues(), doi: "" });
-        if (after !== before) finish(resolve);
       };
-      const observer = new MutationObserver(check);
+      observer = new MutationObserver(check);
       observer.observe(document.documentElement, {
         attributes: true,
         childList: true,
         characterData: true,
         subtree: true,
       });
-      const interval = setInterval(check, pollMs);
-      const timeout = setTimeout(
+      interval = setInterval(check, pollMs);
+      timeout = setTimeout(
         () => finish(reject, new Error("DOI_QUERY_TIMEOUT")),
         timeoutMs,
       );
-      queryButton.click();
-      check();
+      try {
+        queryButton.click();
+        check();
+      } catch (error) {
+        finish(reject, error);
+      }
     });
   }
 

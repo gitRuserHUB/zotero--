@@ -36,21 +36,27 @@ function createWindow() {
 
 describe("Zotero plugin runtime", () => {
   test("adds and removes controls in all main windows", () => {
-    const windows = [createWindow(), createWindow()];
+    const nonZoteroWindow = {
+      document: document.implementation.createHTMLDocument("Other"),
+    };
+    const windows = [createWindow(), nonZoteroWindow, createWindow()];
     const zotero = createZotero(windows);
     const runtime = createPluginRuntime(zotero);
     runtime.init({ rootURI: "resource://plugin/", id: "id", version: "0.1.0" });
 
     runtime.addToAllWindows();
     expect(
-      windows.every((win) =>
+      windows.filter((win) => win.ZoteroPane).every((win) =>
         win.document.querySelector("#ablesci-toolbar-button"),
       ),
     ).toBe(true);
+    expect(
+      nonZoteroWindow.document.querySelector("#ablesci-toolbar-button"),
+    ).toBeNull();
 
     runtime.removeFromAllWindows();
     expect(
-      windows.every(
+      windows.filter((win) => win.ZoteroPane).every(
         (win) => !win.document.querySelector("#ablesci-toolbar-button"),
       ),
     ).toBe(true);
