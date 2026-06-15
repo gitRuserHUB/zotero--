@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, describe, expect, test } from "vitest";
+import yauzl from "yauzl";
 
 import { buildAll } from "../../scripts/build.mjs";
 import {
@@ -11,6 +12,25 @@ import {
 
 const tempWorkspaces = [];
 let activeWorkspace;
+
+function listArchiveEntries(archivePath) {
+  return new Promise((resolve, reject) => {
+    yauzl.open(archivePath, { lazyEntries: true }, (openError, zip) => {
+      if (openError) {
+        reject(openError);
+        return;
+      }
+      const entries = [];
+      zip.on("entry", (entry) => {
+        entries.push(entry.fileName);
+        zip.readEntry();
+      });
+      zip.on("end", () => resolve(entries));
+      zip.on("error", reject);
+      zip.readEntry();
+    });
+  });
+}
 
 function getWorkspace(root) {
   const workspace = tempWorkspaces.find((candidate) => candidate.root === root);
@@ -276,5 +296,60 @@ describe("artifact layout", () => {
       expect(stats.isFile()).toBe(true);
       expect(stats.size).toBeGreaterThan(0);
     }
+
+    expect(
+      await listArchiveEntries(
+        path.join(root, "dist", "zotero-ablesci-assistant-0.1.0.xpi"),
+      ),
+    ).toEqual(expectedArtifactEntries().zotero);
+    expect(
+      await listArchiveEntries(
+        path.join(root, "dist", "ablesci-chromium-extension-0.1.0.zip"),
+      ),
+    ).toEqual(expectedArtifactEntries().chromium);
+  });
+
+  test("builds repository artifacts with matching versions and restricted permissions", async () => {
+    const root = process.cwd();
+    const packageJson = JSON.parse(await fs.readFile("package.json", "utf8"));
+
+    const result = await buildAll(root);
+    await verifyStagedArtifacts(root);
+
+    expect(result.artifacts.map(({ path: artifactPath }) => artifactPath)).toEqual([
+      path.join(root, "dist", `zotero-ablesci-assistant-${packageJson.version}.xpi`),
+      path.join(root, "dist", `ablesci-chromium-extension-${packageJson.version}.zip`),
+    ]);
+    expect(result.artifacts.every(({ size }) => size > 0)).toBe(true);
+
+    const zoteroManifest = JSON.parse(
+      await fs.readFile("dist/zotero/manifest.json", "utf8"),
+    );
+    const chromiumManifest = JSON.parse(
+      await fs.readFile("dist/chromium/manifest.json", "utf8"),
+    );
+    expect(zoteroManifest.version).toBe(packageJson.version);
+    expect(chromiumManifest.version).toBe(packageJson.version);
+    expect(chromiumManifest.manifest_version).toBe(3);
+    expect(chromiumManifest.host_permissions).toEqual([
+      "https://www.ablesci.com/*",
+      "http://www.ablesci.com/*",
+    ]);
+
+    const contentBundle = await fs.readFile("dist/chromium/content.js", "utf8");
+    expect(contentBundle).not.toMatch(/requestSubmit/u);
+    expect(contentBundle).not.toMatch(/\.submit\s*\(/u);
+    expect(contentBundle).not.toMatch(/telemetry|analytics|sentry|segment\.com/iu);
+
+    expect(
+      await listArchiveEntries(
+        path.join(root, "dist", `zotero-ablesci-assistant-${packageJson.version}.xpi`),
+      ),
+    ).toEqual(expectedArtifactEntries().zotero);
+    expect(
+      await listArchiveEntries(
+        path.join(root, "dist", `ablesci-chromium-extension-${packageJson.version}.zip`),
+      ),
+    ).toEqual(expectedArtifactEntries().chromium);
   });
 });

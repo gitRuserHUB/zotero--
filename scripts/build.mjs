@@ -64,6 +64,7 @@ async function createArchive(archivePath, sourceDirectory, entries) {
 }
 
 export async function buildAll(root = process.cwd()) {
+  root = path.resolve(root);
   const packageJson = JSON.parse(
     await fs.readFile(path.join(root, "package.json"), "utf8"),
   );
@@ -126,12 +127,24 @@ export async function buildAll(root = process.cwd()) {
     path.join(chromiumDirectory, "status-panel.css"),
   );
 
+  const artifactPaths = [];
   if (await hasAllEntries(zoteroDirectory, entries.zotero)) {
     await createArchive(zoteroArchive, zoteroDirectory, entries.zotero);
+    artifactPaths.push(zoteroArchive);
   }
   if (await hasAllEntries(chromiumDirectory, entries.chromium)) {
     await createArchive(chromiumArchive, chromiumDirectory, entries.chromium);
+    artifactPaths.push(chromiumArchive);
   }
+
+  return {
+    artifacts: await Promise.all(
+      artifactPaths.map(async (artifactPath) => ({
+        path: artifactPath,
+        size: (await fs.stat(artifactPath)).size,
+      })),
+    ),
+  };
 }
 
 const isMain =
@@ -139,5 +152,8 @@ const isMain =
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 
 if (isMain) {
-  await buildAll();
+  const result = await buildAll();
+  for (const artifact of result.artifacts) {
+    console.log(`Built: ${artifact.path} (${artifact.size} bytes)`);
+  }
 }
