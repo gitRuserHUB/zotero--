@@ -2,7 +2,7 @@ import { PAYLOAD_TTL_MS } from "../shared/constants.js";
 import { mergeFormValues } from "../shared/merge.js";
 
 const PAGE_CHANGED_MESSAGE =
-  "科研通页面结构已变化，无法安全自动填写；请复制元数据后手动填写";
+  "科研通页面结构已变化，无法安全自动填写";
 
 function defaultNavigateToCreate() {
   const target = new URL("/assist/create", globalThis.location.origin);
@@ -13,7 +13,27 @@ function defaultNavigateToCreate() {
 }
 
 function isExpectedQueryFailure(error) {
-  return ["DOI_QUERY_FAILED", "DOI_QUERY_TIMEOUT"].includes(error?.message);
+  return [
+    "DOI_QUERY_FAILED",
+    "DOI_QUERY_TIMEOUT",
+    "DOI_QUERY_CONTROL_NOT_FOUND",
+    "AMBIGUOUS_DOI_QUERY_CONTROL",
+    "FIELD_NOT_FOUND:doi",
+  ].includes(error?.message);
+}
+
+function queryFailureMessage(error) {
+  if (error?.message === "DOI_QUERY_CONTROL_NOT_FOUND") {
+    return "未找到 DOI 查询按钮，已改用 Zotero 元数据填充";
+  }
+  if (error?.message === "FIELD_NOT_FOUND:doi") {
+    return "未找到 DOI 字段，已改用 Zotero 元数据填充";
+  }
+  return "DOI 查询失败，已改用 Zotero 元数据填充";
+}
+
+function pageChangedMessage(error) {
+  return `${PAGE_CHANGED_MESSAGE}：${error?.message ?? "未知错误"}；请复制元数据后手动填写`;
 }
 
 export async function runWorkflow({
@@ -52,7 +72,7 @@ export async function runWorkflow({
         await adapter.queryDoi(task.item.doi, { timeoutMs: 10_000 });
       } catch (error) {
         if (!isExpectedQueryFailure(error)) throw error;
-        panel.showWarning("DOI 查询失败，已改用 Zotero 元数据填充");
+        panel.showWarning(queryFailureMessage(error));
       }
     }
 
@@ -66,7 +86,7 @@ export async function runWorkflow({
     const warning =
       !task.item.doi && !task.item.url ? "请重点核对并补充官网链接" : "";
     panel.showReady(conflicts, warning);
-  } catch {
-    panel.showError(PAGE_CHANGED_MESSAGE);
+  } catch (error) {
+    panel.showError(pageChangedMessage(error));
   }
 }

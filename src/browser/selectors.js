@@ -33,6 +33,8 @@ export const FIELD_SELECTORS = Object.freeze({
 export const QUERY_SELECTORS = Object.freeze([
   '[data-testid="doi-query"]',
   'button[name="doi-query"]',
+  'button:not([type="submit"])',
+  '[role="button"]',
   'button[type="button"]',
 ]);
 

@@ -140,6 +140,33 @@ describe("browser workflow", () => {
     );
   });
 
+  test("falls back to Zotero fields when the DOI query control is missing", async () => {
+    const adapter = {
+      isLoginPage: () => false,
+      isCreatePage: () => true,
+      queryDoi: vi.fn(async () => {
+        throw new Error("DOI_QUERY_CONTROL_NOT_FOUND");
+      }),
+      readValues: vi.fn(() => ({})),
+      writeEmptyFields: vi.fn(),
+    };
+    const status = panel();
+
+    await runWorkflow({
+      task,
+      store: { save: vi.fn(), clear: vi.fn() },
+      panel: status,
+      adapter,
+    });
+
+    expect(status.showWarning).toHaveBeenCalledWith(
+      "未找到 DOI 查询按钮，已改用 Zotero 元数据填充",
+    );
+    expect(adapter.writeEmptyFields).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Zotero title" }),
+    );
+  });
+
   test("warns when an item has neither DOI nor official URL", async () => {
     const noLinkTask = { item: { ...task.item, doi: "", url: "" } };
     const status = panel();
@@ -181,7 +208,7 @@ describe("browser workflow", () => {
     });
 
     expect(status.showError).toHaveBeenCalledWith(
-      "科研通页面结构已变化，无法安全自动填写；请复制元数据后手动填写",
+      "科研通页面结构已变化，无法安全自动填写：AMBIGUOUS_FIELD:title；请复制元数据后手动填写",
     );
     expect(store.clear).not.toHaveBeenCalled();
   });

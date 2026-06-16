@@ -14,6 +14,21 @@ function findHosts(document) {
   return { toolbar, itemMenu };
 }
 
+function toolbarInsertReference(document, toolbar) {
+  const noteButton = document.getElementById("zotero-tb-note-add");
+  if (noteButton?.parentElement === toolbar) return noteButton.nextSibling;
+
+  return (
+    [...toolbar.children].find(
+      (element) =>
+        element.tagName.toLowerCase() === "spacer" &&
+        element.getAttribute("flex") === "1",
+    ) ??
+    document.getElementById("zotero-tb-search-spinner") ??
+    document.getElementById("zotero-tb-search")
+  );
+}
+
 function addCommandListener(element, onCommand) {
   element.addEventListener("command", () => {
     void onCommand();
@@ -37,9 +52,13 @@ export function addWindowUi(window, { onCommand, iconUrl }) {
     button.setAttribute("label", "科研通求助");
     button.setAttribute("tooltiptext", "在科研通发起文献求助");
     button.setAttribute("image", iconUrl);
-    button.setAttribute("class", "zotero-tb-button");
+    button.setAttribute("class", "zotero-tb-button ablesci-tb-button");
+    button.setAttribute(
+      "style",
+      "width: 28px; min-width: 28px; max-width: 28px; height: 28px; min-height: 28px; padding: 0;",
+    );
     addCommandListener(button, onCommand);
-    toolbar.append(button);
+    toolbar.insertBefore(button, toolbarInsertReference(document, toolbar));
   }
 
   if (!document.getElementById(ITEM_MENU_ID)) {
